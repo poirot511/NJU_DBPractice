@@ -49,7 +49,6 @@ namespace wsdb {
       buffer_pool_manager_->UnpinPage(table_id_, rid.PageID(), false);
       WSDB_THROW(WSDB_RECORD_MISS, fmt::format("Record not found at RID: (page_id={}, slot_id={})", rid.PageID(), rid.SlotID()));
     }
-   
     auto nullmap = std::make_unique<char[]>(tab_hdr_.nullmap_size_);
     auto data = std::make_unique<char[]>(tab_hdr_.rec_size_);
     page_handle->ReadSlot(rid.SlotID(), nullmap.get(), data.get());
@@ -75,8 +74,8 @@ namespace wsdb {
     // 检查页面是否已满
     if (BitMap::FindFirst(page_handle->GetBitmap(), tab_hdr_.rec_per_page_, 0, false) == tab_hdr_.rec_per_page_) {
       // 更新表头的第一个空闲页面 ID 和当前页面的下一个页面 ID
-      tab_hdr_.first_free_page_ = page_handle->GetNextPageId();
-      page_handle->SetNextPageId(INVALID_PAGE_ID);
+      tab_hdr_.first_free_page_ = page_handle->GetPage()->GetNextFreePageId();
+      page_handle->GetPage()->SetNextFreePageId(INVALID_PAGE_ID);
     }
     buffer_pool_manager_->UnpinPage(table_id_, page_handle->GetPage()->GetPageId(), true);
     return rid;
@@ -105,8 +104,8 @@ namespace wsdb {
 
     // 检查页面是否已满
     if (BitMap::FindFirst(page_handle->GetBitmap(), tab_hdr_.rec_per_page_, 0, false) == tab_hdr_.rec_per_page_) {
-      tab_hdr_.first_free_page_ = page_handle->GetNextPageId();
-      page_handle->SetNextPageId(INVALID_PAGE_ID);
+      tab_hdr_.first_free_page_ = page_handle->GetPage()->GetNextFreePageId();
+      page_handle->GetPage()->SetNextFreePageId(INVALID_PAGE_ID);
     }
 
     buffer_pool_manager_->UnpinPage(table_id_, rid.PageID(), true);
@@ -126,7 +125,7 @@ namespace wsdb {
     tab_hdr_.rec_num_--;
     // 检查页面是否未满
     if (BitMap::FindFirst(page_handle->GetBitmap(), tab_hdr_.rec_per_page_, 0, false) < tab_hdr_.rec_per_page_) {
-      page_handle->SetNextPageId(tab_hdr_.first_free_page_);
+      page_handle->GetPage()->SetNextFreePageId(tab_hdr_.first_free_page_);
       tab_hdr_.first_free_page_ = rid.PageID();
     }
     buffer_pool_manager_->UnpinPage(table_id_, rid.PageID(), true);

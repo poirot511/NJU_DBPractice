@@ -243,7 +243,7 @@ namespace wsdb {
     frame.Reset();
 
     Page* page = frame.GetPage();
-    page->SetTablePageId(fid, pid);
+    page->SetFilePageId(fid, pid);
     disk_manager_->ReadPage(fid, pid, page->GetData());
 
     frame.Pin();
