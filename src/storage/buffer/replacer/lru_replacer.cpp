@@ -26,12 +26,60 @@ namespace wsdb {
 
 LRUReplacer::LRUReplacer() : cur_size_(0), max_size_(BUFFER_POOL_SIZE) {}
 
-auto LRUReplacer::Victim(frame_id_t *frame_id) -> bool { WSDB_STUDENT_TODO(l1, t1); }
+auto LRUReplacer::Victim(frame_id_t *frame_id) -> bool {
+  std::lock_guard<std::mutex> guard(latch_);
+  if (lru_list_.empty()) {
+    return false;
+  }
+  // 获取最近最少使用的可驱逐帧
+  for (auto it = lru_list_.begin(); it != lru_list_.end(); ++it) {
+    if (it->second) {
+      *frame_id = it->first;
+      lru_hash_.erase(it->first);
+      lru_list_.erase(it);
+      --cur_size_;
+      return true;
+    }
+  }
+  return false;
+}
 
-void LRUReplacer::Pin(frame_id_t frame_id) { WSDB_STUDENT_TODO(l1, t1); }
+void LRUReplacer::Pin(frame_id_t frame_id) {
+  std::lock_guard<std::mutex> guard(latch_);
+  auto it = lru_hash_.find(frame_id);
+  if (it != lru_hash_.end()) {
+    if (it->second->second) {
+      cur_size_--;
+    }
+    lru_list_.erase(it->second);
+    lru_list_.emplace_back(frame_id, false);
+    lru_hash_[frame_id] = --lru_list_.end();
+  }
+  else {
+    lru_list_.emplace_back(frame_id, false);
+    lru_hash_[frame_id] = --lru_list_.end();
+  }
+}
 
-void LRUReplacer::Unpin(frame_id_t frame_id) { WSDB_STUDENT_TODO(l1, t1); }
+void LRUReplacer::Unpin(frame_id_t frame_id) {
+  std::lock_guard<std::mutex> guard(latch_);
+  if (lru_hash_.find(frame_id) == lru_hash_.end()) {
+    lru_list_.emplace_back(frame_id, true);
+    lru_hash_[frame_id] = --lru_list_.end();
+  }
+  else {
+    auto frame_it = lru_hash_.find(frame_id);
+    if(frame_it->second->second) {
+      return;
+    }
+    frame_it->second->second = true;
+    ++cur_size_;
+  }
+}
 
-auto LRUReplacer::Size() -> size_t { WSDB_STUDENT_TODO(l1, t1); }
+auto LRUReplacer::Size() -> size_t {
+  std::lock_guard<std::mutex> guard(latch_);
+  return cur_size_;
+}
 
 }  // namespace wsdb
