@@ -15,9 +15,9 @@
  - along with this program.  If not, see <https://www.gnu.org/licenses/>.
  -----------------------------------------------------------------------------*/
 
-//
-// Created by ziqi on 2024/7/17.
-//
+ //
+ // Created by ziqi on 2024/7/17.
+ //
 
 #ifndef WSDB_LRU_K_REPLACER_H
 #define WSDB_LRU_K_REPLACER_H
@@ -26,64 +26,89 @@
 #include <unordered_map>
 #include "replacer.h"
 #include "../common/error.h"
+#define inf_num 1000000
 
 namespace wsdb {
 
-class LRUKReplacer : public Replacer
-{
-public:
-  explicit LRUKReplacer(size_t k);
-
-  ~LRUKReplacer() override = default;
-
-  auto Victim(frame_id_t *frame_id) -> bool override;
-
-  void Pin(frame_id_t frame_id) override;
-
-  void Unpin(frame_id_t frame_id) override;
-
-  auto Size() -> size_t override;
-
-private:
-  class LRUKNode
+  class LRUKReplacer : public Replacer
   {
   public:
-    LRUKNode() = default;
+    explicit LRUKReplacer(size_t k);
 
-    explicit LRUKNode(frame_id_t fid, size_t k) : fid_(fid), k(k), is_evictable_(false) {}
+    ~LRUKReplacer() override = default;
 
-    void AddHistory(timestamp_t ts) { WSDB_STUDENT_TODO(l1, f1); }
+    auto Victim(frame_id_t* frame_id) -> bool override;
 
-    /**
-     * Get the distance between the current timestamp and the k-th timestamp in the history,
-     * think: why return type is unsigned long long?
-     * @param cur_ts
-     * @return
-     */
-    auto GetBackwardKDistance(timestamp_t cur_ts) -> unsigned long long
-    {
-      WSDB_STUDENT_TODO(l1, f1);
-    }
+    void Pin(frame_id_t frame_id) override;
 
-    [[nodiscard]] auto IsEvictable() const -> bool { WSDB_STUDENT_TODO(l1, f1); }
+    void Unpin(frame_id_t frame_id) override;
 
-    auto SetEvictable(bool set_evictable) -> void { WSDB_STUDENT_TODO(l1, f1); }
+    auto Size() -> size_t override;
 
   private:
-    std::list<timestamp_t> history_;
-    frame_id_t             fid_{INVALID_FRAME_ID};
-    size_t                 k{};
-    bool                   is_evictable_{};
-  };
+    class LRUKNode
+    {
+    public:
+      LRUKNode() = default;
 
-private:
-  std::unordered_map<frame_id_t, LRUKNode> node_store_;  // frame_id -> LRUKNode
-  size_t                                   cur_ts_{0};
-  size_t                                   cur_size_{0};  // number of evictable frames
-  size_t                                   max_size_;     // maximum number of frames that can be stored
-  size_t                                   k_;            // k for LRU-k
-  std::mutex                               latch_;        // mutex for curr_size_, node_store_, and curr_timestamp_
-};
+      explicit LRUKNode(frame_id_t fid, size_t k) : fid_(fid), k(k), is_evictable_(false) {}
+
+      void AddHistory(timestamp_t ts) {
+        if (history_.size() == k) {
+          history_.pop_front();
+        }
+        history_.push_back(ts);
+      }
+
+      /**
+       * Get the distance between the current timestamp and the k-th timestamp in the history,
+       * think: why return type is unsigned long long?
+       * @param cur_ts
+       * @return
+       */
+      auto GetBackwardKDistance(timestamp_t cur_ts) -> unsigned long long {
+        return cur_ts - history_.front();
+      }
+
+      [[nodiscard]] auto IsEvictable() const -> bool {
+        return is_evictable_;
+      }
+
+      auto SetEvictable(bool set_evictable) -> void {
+        is_evictable_ = set_evictable;
+      }
+
+      size_t GetHistorySize() const {
+        return history_.size();
+      }
+      timestamp_t GetFirstAccessTime() const {
+        if (!history_.empty()) {
+          return history_.front();
+        }
+        return 0;  // 或根据实际情况返回合适的默认值
+      }
+      timestamp_t GetLastAccessTime() const {
+        if (!history_.empty()) {
+          return history_.back();
+        }
+        return 0;  // 或根据实际情况返回合适的默认值
+      }
+
+    private:
+      std::list<timestamp_t> history_;
+      frame_id_t             fid_{ INVALID_FRAME_ID };
+      size_t                 k{};
+      bool                   is_evictable_{};
+    };
+
+  private:
+    std::unordered_map<frame_id_t, LRUKNode> node_store_;  // frame_id -> LRUKNode
+    size_t                                   cur_ts_{ 0 };
+    size_t                                   cur_size_{ 0 };  // number of evictable frames
+    size_t                                   max_size_;     // maximum number of frames that can be stored
+    size_t                                   k_;            // k for LRU-k
+    std::mutex                               latch_;        // mutex for curr_size_, node_store_, and curr_timestamp_
+  };
 }  // namespace wsdb
 
 #endif  // WSDB_LRU_K_REPLACER_H
