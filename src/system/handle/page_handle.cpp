@@ -79,17 +79,76 @@ PAXPageHandle::~PAXPageHandle() = default;
 // | field_m_1, field_m_2, ... , field_m_n |
 void PAXPageHandle::WriteSlot(size_t slot_id, const char *null_map, const char *data, bool update)
 {
-  WSDB_STUDENT_TODO(l1, f2);
+  // WSDB_ASSERT(slot_id < tab_hdr_->rec_per_page_, "slot_id out of range");
+  // WSDB_ASSERT(BitMap::GetBit(bitmap_, slot_id) == update, fmt::format("update: {}", update));
+
+  // 写入 null_map
+  memcpy(slots_mem_ + slot_id * tab_hdr_->nullmap_size_, null_map, tab_hdr_->nullmap_size_);
+
+  // 写入每个字段的数据
+  size_t data_offset = 0;
+  for (size_t i = 0; i < schema_->GetFieldCount(); i++) {
+    const auto& field = schema_->GetFieldAt(i);
+    size_t field_size = field.field_.field_size_;
+    // 使用预计算的字段偏移量
+    char* field_ptr = slots_mem_ + offsets_[i] + (slot_id * field_size);
+    memcpy(field_ptr, data + data_offset, field_size);
+    data_offset += field_size;
+  }
 }
 
-void PAXPageHandle::ReadSlot(size_t slot_id, char *null_map, char *data) { WSDB_STUDENT_TODO(l1, f2); }
+void PAXPageHandle::ReadSlot(size_t slot_id, char *null_map, char *data)
+{
+  // WSDB_ASSERT(slot_id < tab_hdr_->rec_per_page_, "slot_id out of range");
+  // WSDB_ASSERT(BitMap::GetBit(bitmap_, slot_id) == true, "slot is empty");
+
+  // 读取 null_map
+  memcpy(null_map, slots_mem_ + slot_id * tab_hdr_->nullmap_size_, tab_hdr_->nullmap_size_);
+
+  // 读取每个字段的数据
+  size_t data_offset = 0;
+  for (size_t i = 0; i < schema_->GetFieldCount(); i++) {
+    const auto& field = schema_->GetFieldAt(i);
+    size_t field_size = field.field_.field_size_;
+    // 使用预计算的字段偏移量
+    char* field_ptr = slots_mem_ + offsets_[i] + (slot_id * field_size);
+    memcpy(data + data_offset, field_ptr, field_size);
+    data_offset += field_size;
+  }
+}
 
 auto PAXPageHandle::ReadChunk(const RecordSchema *chunk_schema) -> ChunkUptr
 {
   std::vector<ArrayValueSptr> col_arrs;
   col_arrs.reserve(chunk_schema->GetFieldCount());
-  // read data each field and construct ArrayValue
-  WSDB_STUDENT_TODO(l1, f2);
+
+  for (size_t i = 0; i < chunk_schema->GetFieldCount(); i++) {
+    const auto& field = chunk_schema->GetFieldAt(i);
+    size_t orig_idx = schema_->GetRTFieldIndex(field);
+    size_t field_size = field.field_.field_size_;
+    
+    auto array_value = std::make_shared<ArrayValue>();
+    char* field_base_ptr = slots_mem_ + offsets_[orig_idx];
+    
+    for (size_t slot_id = 0; slot_id < tab_hdr_->rec_per_page_; slot_id++) {
+      if (!BitMap::GetBit(bitmap_, slot_id)) {
+        continue;  // 跳过未使用的槽位，不添加任何值
+      }
+
+      // 检查 null_map 中对应的位
+      char* null_map_ptr = slots_mem_ + slot_id * tab_hdr_->nullmap_size_;
+      if (BitMap::GetBit(null_map_ptr, orig_idx)) {
+        array_value->Append(ValueFactory::CreateNullValue(field.field_.field_type_));
+      } else {
+        char* field_ptr = field_base_ptr + (slot_id * field_size);
+        auto value = ValueFactory::CreateValue(
+            field.field_.field_type_, field_ptr, field_size);
+        array_value->Append(value);
+      }
+    }
+    col_arrs.push_back(array_value);
+  }
+  
   return std::make_unique<Chunk>(chunk_schema, std::move(col_arrs));
 }
 }  // namespace wsdb

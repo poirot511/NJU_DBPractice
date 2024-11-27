@@ -35,8 +35,14 @@ namespace wsdb {
     schema_->SetTableId(table_id_);
     if (storage_model_ == PAX_MODEL) {
       field_offset_.resize(schema_->GetFieldCount());
-      // calculate offsets of fields
-      WSDB_STUDENT_TODO(l1, f2);
+      // 计算PAX模型中每个字段的偏移量
+      // 首先跳过nullmap区域
+      size_t current_offset = tab_hdr_.nullmap_size_ * tab_hdr_.rec_per_page_;
+      // 依次为每个字段计算偏移量
+      for (size_t i = 0; i < schema_->GetFieldCount(); i++) {
+        field_offset_[i] = current_offset;
+        current_offset += schema_->GetFieldAt(i).field_.field_size_ * tab_hdr_.rec_per_page_;
+      }
     }
   }
 
@@ -57,7 +63,16 @@ namespace wsdb {
     return std::make_unique<Record>(schema_.get(), nullmap.get(), data.get(), rid);
   }
 
-  auto TableHandle::GetChunk(page_id_t pid, const RecordSchema* chunk_schema) -> ChunkUptr { WSDB_STUDENT_TODO(l1, f2); }
+  auto TableHandle::GetChunk(page_id_t pid, const RecordSchema* chunk_schema) -> ChunkUptr 
+  {
+    // 获取页面句柄
+    auto page_handle = FetchPageHandle(pid);
+    // 使用页面句柄读取数据块
+    auto chunk = page_handle->ReadChunk(chunk_schema);
+    // 解除页面固定
+    buffer_pool_manager_->UnpinPage(table_id_, pid, false);
+    return chunk;
+  }
 
   auto TableHandle::InsertRecord(const Record& record) -> RID
   {
