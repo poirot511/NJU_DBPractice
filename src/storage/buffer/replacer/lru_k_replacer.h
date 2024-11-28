@@ -87,12 +87,6 @@ namespace wsdb {
         }
         return 0;  
       }
-      timestamp_t GetLastAccessTime() const {
-        if (!history_.empty()) {
-          return history_.back();
-        }
-        return 0;  
-      }
 
     private:
       std::list<timestamp_t> history_;

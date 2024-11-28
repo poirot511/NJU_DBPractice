@@ -211,6 +211,7 @@ TEST(ReplacerTest, LRUK)
     replacer.Victim(&frame_id);
     ASSERT_EQ(frame_id, 1);
     replacer.Victim(&frame_id);
+    ASSERT_EQ(frame_id, 3);
     ASSERT_EQ(replacer.Size(), 0);
   }
 
