@@ -85,13 +85,13 @@ namespace wsdb {
         if (!history_.empty()) {
           return history_.front();
         }
-        return 0;  // 或根据实际情况返回合适的默认值
+        return 0;  
       }
       timestamp_t GetLastAccessTime() const {
         if (!history_.empty()) {
           return history_.back();
         }
-        return 0;  // 或根据实际情况返回合适的默认值
+        return 0;  
       }
 
     private:
