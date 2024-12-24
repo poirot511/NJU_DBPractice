@@ -46,6 +46,7 @@ public:
 private:
   TableHandle *tab_;
   RID          rid_;
+  bool is_end_{false};
 };
 }  // namespace wsdb
 

@@ -50,31 +50,65 @@ SortExecutor::~SortExecutor()
   }
 }
 
-void SortExecutor::Init()
-{
+void SortExecutor::Init() {
   // TODO: decide whether to use merge sort according to the cardinality of the child. 
-  // leave is_merge_sort_ as false if you just want to use in-memory sort
   is_merge_sort_ = false;
   if (is_merge_sort_) {
     WSDB_STUDENT_TODO(l2, f1);
+    return;
   }
-  WSDB_STUDENT_TODO(l2, t1);
+
+  // 重置状态
+  buf_idx_ = 0;
+  is_sorted_ = false;
+  sort_buffer_.clear();
+
+  // 初始化子执行器
+  child_->Init();
+
+  // 从子执行器读取所有记录到sort_buffer_
+  while (!child_->IsEnd()) {
+    auto record = child_->GetRecord();
+    if (record != nullptr) {
+      sort_buffer_.push_back(std::move(record));
+    }
+    child_->Next();
+  }
+
+  // 对缓存中的记录排序
+  if (!sort_buffer_.empty()) {
+    SortBuffer();
+    is_sorted_ = true;
+    record_ = std::make_unique<Record>(*sort_buffer_[0]);
+  }
 }
 
-void SortExecutor::Next()
-{
+void SortExecutor::Next() {
   if (is_merge_sort_) {
     WSDB_STUDENT_TODO(L2, f1);
+    return;
   }
-  WSDB_STUDENT_TODO(L2, t1);
+
+  if (!is_sorted_ || buf_idx_ >= sort_buffer_.size() - 1) {
+    record_ = nullptr;
+    return;
+  }
+
+  buf_idx_++;
+  if (buf_idx_ < sort_buffer_.size()) {
+    record_ = std::make_unique<Record>(*sort_buffer_[buf_idx_]);
+  } else {
+    record_ = nullptr;
+  }
 }
 
-auto SortExecutor::IsEnd() const -> bool
-{
+auto SortExecutor::IsEnd() const -> bool {
   if (is_merge_sort_) {
     WSDB_STUDENT_TODO(L2, f1);
+    return true;
   }
-  WSDB_STUDENT_TODO(L2, t1);
+  
+  return !is_sorted_ || record_ == nullptr || buf_idx_ >= sort_buffer_.size();
 }
 
 auto SortExecutor::Compare(const Record &lhs, const Record &rhs) const -> bool
@@ -93,7 +127,13 @@ auto SortExecutor::GetSortFileName(size_t file_group, size_t file_idx) const -> 
   return fmt::format("{}_{}_{}", merge_result_file_, file_group, file_idx);
 }
 
-void SortExecutor::SortBuffer() { WSDB_STUDENT_TODO(L2, t1); }
+void SortExecutor::SortBuffer() {
+  // 使用Compare函数对sort_buffer_中的记录进行排序
+  std::sort(sort_buffer_.begin(), sort_buffer_.end(), 
+    [this](const RecordUptr& a, const RecordUptr& b) {
+      return this->Compare(*a, *b);
+    });
+}
 
 void SortExecutor::DumpBufferToFile(size_t file_idx) { WSDB_STUDENT_TODO(L2, f1); }
 

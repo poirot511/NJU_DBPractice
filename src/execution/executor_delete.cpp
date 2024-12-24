@@ -34,13 +34,40 @@ void DeleteExecutor::Init() { WSDB_FETAL("DeleteExecutor does not support Init")
 
 void DeleteExecutor::Next()
 {
-  // number of deleted records
+  if (is_end_) {
+    return;
+  }
+
   int count = 0;
+  child_->Init();
 
-  WSDB_STUDENT_TODO(l2, t1);
 
+  while (!child_->IsEnd()) {
+    auto record = child_->GetRecord();
+    if (record != nullptr) {
+      const RID rid = record->GetRID();
+      
+      // 删除表中的记录
+      tbl_->DeleteRecord(rid);
+      
+      // 从所有相关索引中删除记录
+      for (auto* index : indexes_) {
+        if (index != nullptr) {
+          index->DeleteRecord(*record);
+        }
+      }
+      
+      count++;
+    }
+    child_->Next();
+  }
+
+  // 创建结果记录（包含删除的记录数）
   std::vector<ValueSptr> values{ValueFactory::CreateIntValue(count)};
   record_ = std::make_unique<Record>(out_schema_.get(), values, INVALID_RID);
+    
+
+
   is_end_ = true;
 }
 

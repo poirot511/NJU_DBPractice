@@ -26,11 +26,27 @@ LimitExecutor::LimitExecutor(AbstractExecutorUptr child, int limit)
     : AbstractExecutor(Basic), child_(std::move(child)), limit_(limit), count_(0)
 {}
 
-void LimitExecutor::Init() { WSDB_STUDENT_TODO(l2, t1); }
+void LimitExecutor::Init() { 
+    count_ = 0;
+    child_->Init();
+    if (!child_->IsEnd()) {
+        record_ = child_->GetRecord();
+    }
+}
 
-void LimitExecutor::Next() { WSDB_STUDENT_TODO(l2, t1); }
+void LimitExecutor::Next() {
+    if (count_ < limit_ && !child_->IsEnd()) {
+        child_->Next();
+        if (!child_->IsEnd()) {
+            record_ = child_->GetRecord();
+            count_++;
+        }
+    }
+}
 
-[[nodiscard]] auto LimitExecutor::IsEnd() const -> bool { WSDB_STUDENT_TODO(l2, t1); }
+[[nodiscard]] auto LimitExecutor::IsEnd() const -> bool { 
+    return count_ >= limit_ || child_->IsEnd();
+}
 
 [[nodiscard]] auto LimitExecutor::GetOutSchema() const -> const RecordSchema * { return child_->GetOutSchema(); }
 }  // namespace wsdb

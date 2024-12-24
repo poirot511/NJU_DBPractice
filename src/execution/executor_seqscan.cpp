@@ -25,16 +25,51 @@ namespace wsdb {
 
 SeqScanExecutor::SeqScanExecutor(TableHandle *tab) : AbstractExecutor(Basic), tab_(tab) {}
 
-void SeqScanExecutor::Init()
-{
-  rid_ = tab_->GetFirstRID();
-  
-  WSDB_STUDENT_TODO(l2, t1);
+void SeqScanExecutor::Init() {
+    // 初始化RID和结束标志
+    rid_ = tab_->GetFirstRID();
+    is_end_ = (rid_ == INVALID_RID);
+    record_ = nullptr;
+
+    // 如果存在有效记录，获取第一条记录
+    if (!is_end_) {
+        record_ = tab_->GetRecord(rid_);
+        // 如果获取记录失败，标记为结束
+        if (record_ == nullptr) {
+            is_end_ = true;
+        }
+    }
 }
 
-void SeqScanExecutor::Next() { WSDB_STUDENT_TODO(l2, t1); }
+void SeqScanExecutor::Next() {
+    // 清空当前记录
+    record_ = nullptr;
+    
+    // 如果未结束，获取下一条记录
+    if (!is_end_) {
+        // 获取下一个RID
+        rid_ = tab_->GetNextRID(rid_);
+        
+        // 检查是否到达末尾
+        if (rid_ == INVALID_RID) {
+            is_end_ = true;
+        } else {
+            // 获取下一条记录
+            record_ = tab_->GetRecord(rid_);
+            // 如果获取记录失败，标记为结束
+            if (record_ == nullptr) {
+                is_end_ = true;
+            }
+        }
+    }
+}
 
-auto SeqScanExecutor::IsEnd() const -> bool { WSDB_STUDENT_TODO(l2, t1); }
+auto SeqScanExecutor::IsEnd() const -> bool {
+    // 同时检查结束标志和记录状态
+    return is_end_ || record_ == nullptr;
+}
 
 auto SeqScanExecutor::GetOutSchema() const -> const RecordSchema * { return &tab_->GetSchema(); }
+
+
 }  // namespace wsdb
