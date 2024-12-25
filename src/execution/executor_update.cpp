@@ -69,14 +69,9 @@ void UpdateExecutor::Next() {
 
     // 应用更新
     for (const auto &[field, new_value] : updates_) {
-      try {
-        size_t field_idx = schema->GetRTFieldIndex(field);
-        if (field_idx < new_values.size()) {
-          new_values[field_idx] = new_value;
-        }
-      } catch (const std::exception &e) {
-        // 字段不存在，跳过这个更新
-        continue;
+      size_t field_idx = schema->GetRTFieldIndex(field);
+      if (field_idx < new_values.size()) {
+        new_values[field_idx] = new_value;
       }
     }
 

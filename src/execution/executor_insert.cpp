@@ -50,7 +50,6 @@ void InsertExecutor::Next()
     
     count++;
   }
-
   // 生成结果记录(包含插入的记录数)
   std::vector<ValueSptr> values{ValueFactory::CreateIntValue(count)};
   record_ = std::make_unique<Record>(out_schema_.get(), values, INVALID_RID);
