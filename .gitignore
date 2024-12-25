@@ -25,3 +25,9 @@ docs/book
 src/parser/lex.yy.cpp
 src/parser/yacc.tab.cpp
 src/parser/yacc.tab.h
+test/sql/lab02/f1/expected/01_prepare_table_stock.out
+test/sql/lab02/f1/expected/02_prepare_table_item.out
+test/sql/lab02/f1/expected/03_join.out
+test/sql/lab02/f1/expected/04_merge_sort.out
+test/sql/lab02/f1/expected/05_cleanup.out
+expected.tar.gz
