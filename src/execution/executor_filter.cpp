@@ -29,7 +29,6 @@ FilterExecutor::FilterExecutor(AbstractExecutorUptr child, std::function<bool(co
 
 void FilterExecutor::Init() {
     child_->Init();
-    // 初始化时就开始寻找第一个满足条件的记录
     while (!child_->IsEnd()) {
         auto rec = child_->GetRecord();
         if (rec && filter_(*rec)) {
@@ -47,7 +46,6 @@ void FilterExecutor::Next() {
     }
     
     child_->Next();
-    // 查找下一个满足过滤条件的记录
     while (!child_->IsEnd()) {
         auto rec = child_->GetRecord();
         if (rec && filter_(*rec)) {

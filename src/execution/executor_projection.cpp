@@ -32,11 +32,8 @@ ProjectionExecutor::ProjectionExecutor(AbstractExecutorUptr child, RecordSchemaU
 // hint: record_ = std::make_unique<Record>(out_schema_.get(), *child_record);
 
 void ProjectionExecutor::Init() {
-    // 初始化子执行器
     child_->Init();   
-    // 清空当前记录
     record_ = nullptr;   
-    // 如果子执行器不为空且有数据，则创建第一条投影记录
     if (!child_->IsEnd()) {
         RecordUptr child_record = child_->GetRecord();
         if (child_record != nullptr) {
@@ -46,11 +43,8 @@ void ProjectionExecutor::Init() {
 }
 
 void ProjectionExecutor::Next() {
-    // 清空当前记录
     record_ = nullptr;   
-    // 获取子执行器的下一条记录
     child_->Next();  
-    // 如果子执行器还有数据，创建新的投影记录
     if (!child_->IsEnd()) {
         RecordUptr child_record = child_->GetRecord();
         if (child_record != nullptr) {
@@ -60,7 +54,6 @@ void ProjectionExecutor::Next() {
 }
 
 auto ProjectionExecutor::IsEnd() const -> bool {
-    // 如果子执行器已结束或当前记录为空，则认为投影执行器已结束
     return child_->IsEnd() || record_ == nullptr;
 }
 

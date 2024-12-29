@@ -57,16 +57,10 @@ void SortExecutor::Init() {
     WSDB_STUDENT_TODO(l2, f1);
     return;
   }
-
-  // 重置状态
   buf_idx_ = 0;
   is_sorted_ = false;
   sort_buffer_.clear();
-
-  // 初始化子执行器
   child_->Init();
-
-  // 从子执行器读取所有记录到sort_buffer_
   while (!child_->IsEnd()) {
     auto record = child_->GetRecord();
     if (record != nullptr) {
@@ -74,8 +68,6 @@ void SortExecutor::Init() {
     }
     child_->Next();
   }
-
-  // 对缓存中的记录排序
   if (!sort_buffer_.empty()) {
     SortBuffer();
     is_sorted_ = true;
@@ -128,7 +120,6 @@ auto SortExecutor::GetSortFileName(size_t file_group, size_t file_idx) const -> 
 }
 
 void SortExecutor::SortBuffer() {
-  // 使用Compare函数对sort_buffer_中的记录进行排序
   std::sort(sort_buffer_.begin(), sort_buffer_.end(), 
     [this](const RecordUptr& a, const RecordUptr& b) {
       return this->Compare(*a, *b);

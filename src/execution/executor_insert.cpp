@@ -38,19 +38,13 @@ void InsertExecutor::Next()
   // number of inserted records
   int count = 0;
 
-  // 遍历所有待插入的记录
   for (auto& insert : inserts_) {
-    // 插入记录到表中
     tbl_->InsertRecord(*insert);
-    
-    // 更新所有相关索引
     for (auto* idx : indexes_) {
       idx->InsertRecord(*insert);
-    }
-    
+    }    
     count++;
   }
-  // 生成结果记录(包含插入的记录数)
   std::vector<ValueSptr> values{ValueFactory::CreateIntValue(count)};
   record_ = std::make_unique<Record>(out_schema_.get(), values, INVALID_RID);
   is_end_ = true;
